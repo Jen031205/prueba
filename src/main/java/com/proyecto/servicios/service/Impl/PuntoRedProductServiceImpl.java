@@ -28,7 +28,6 @@ public class PuntoRedProductServiceImpl implements PuntoRedProductService {
 
     @Override
     public ProductListResponse getProductList() {
-        validateToken();
         // Inicia la invocacion al servicio externo.
         log.info("Iniciando invocacion de lista de productos PuntoRed");
 
@@ -43,9 +42,17 @@ public class PuntoRedProductServiceImpl implements PuntoRedProductService {
             }
 
             return new ProductListResponse(content, response.getHeaders().getFirst("Content-Type"));
+        } catch (IllegalStateException exception) {
+            log.error("No fue posible obtener el token de PuntoRed", exception);
+            throw new PuntoRedIntegrationException(
+                "No fue posible autenticar contra PuntoRed. Configura PUNTORED_API_TOKEN o verifica las credenciales de GestoPago",
+                exception);
         } catch (FeignException.Unauthorized | FeignException.Forbidden exception) {
-            log.error("Error de autenticacion al invocar lista de productos PuntoRed");
-            throw new PuntoRedIntegrationException("No fue posible autenticar la invocacion a PuntoRed", exception);
+            log.error("PuntoRed rechazo la autenticacion al consultar productos. status={}", exception.status());
+            throw new PuntoRedIntegrationException(
+                "PuntoRed rechazo la autenticacion (HTTP " + exception.status()
+                    + "). Verifica PUNTORED_API_TOKEN y PUNTORED_API_KEY",
+                exception);
         } catch (RetryableException exception) {
             log.error("Timeout o error de comunicacion al invocar lista de productos PuntoRed");
             throw new PuntoRedIntegrationException("PuntoRed no respondio dentro del tiempo esperado", exception);
@@ -55,14 +62,6 @@ public class PuntoRedProductServiceImpl implements PuntoRedProductService {
         } finally {
             // Cierra el flujo de logs para la operacion.
             log.info("Finalizo invocacion de lista de productos PuntoRed");
-        }
-    }
-
-    private void validateToken() {
-        // Verifica que el token exista antes de invocar el servicio.
-        if (properties.getToken() == null || properties.getToken().isBlank()) {
-            log.error("No se configuro el token de PuntoRed");
-            throw new PuntoRedIntegrationException("El token de PuntoRed no esta configurado");
         }
     }
 }
