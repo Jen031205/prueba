@@ -14,6 +14,9 @@ Las propiedades se encuentran en `src/main/resources/application.properties` y a
 - `PUNTORED_API_KEY`: API key opcional entregada por PuntoRed.
 - `PUNTORED_API_CONNECT_TIMEOUT_MS`: timeout de conexion.
 - `PUNTORED_API_READ_TIMEOUT_MS`: timeout de lectura.
+- `REDIS_HOST`: host de Redis, por defecto `localhost`.
+- `REDIS_PORT`: puerto de Redis, por defecto `6379`.
+- `REDIS_PASSWORD`: password opcional de Redis.
 
 El token se envia como `Authorization: Bearer <token>`. La API key se envia como `X-API-Key` cuando esta configurada.
 
@@ -24,6 +27,11 @@ El token se envia como `Authorization: Bearer <token>`. La API key se envia como
 - `PuntoRedProductServiceImpl`: agrega autenticacion, logs y traduccion de errores.
 - `ProductListResponse`: DTO que conserva la respuesta externa.
 - `PuntoRedProductController`: endpoint interno `/productos`.
+
+El catalogo se persiste en PostgreSQL mediante `ProductoRepository` y la tabla
+`productos` creada por Flyway. Redis usa la clave `puntored:catalogo:productos`;
+la lectura intenta primero Redis, luego PostgreSQL, y el refresco programado de
+las 06:00 actualiza ambas fuentes.
 
 La documentacion de PuntoRed muestra respuestas XML, pero no se recibio un esquema completo de productos. Por eso la respuesta se conserva como texto XML en el DTO, evitando inventar campos y permitiendo tiparla cuando el proveedor entregue el contrato definitivo.
 

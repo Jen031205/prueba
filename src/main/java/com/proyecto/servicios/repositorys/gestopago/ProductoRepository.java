@@ -1,0 +1,7 @@
+package com.proyecto.servicios.repositorys.gestopago;
+
+import com.proyecto.servicios.entity.gestopago.Producto;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProductoRepository extends JpaRepository<Producto, Integer> {
+}
