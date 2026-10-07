@@ -40,21 +40,29 @@ public class ConfigDB {
 
     @Bean(name="sfDatasource")
     public DataSource sfDatasource(){
-        HikariConfig config=new HikariConfig();
-        try{
-            config.setJdbcUrl(env.getProperty("spring.datasource.url"));
-            config.setPassword(env.getProperty("spring.datasource.password"));
-            config.setUsername(env.getProperty("spring.datasource.username"));
-            config.setMaximumPoolSize(10);
-            config.setMaxLifetime(18800);
-            config.setConnectionTimeout(5000);
+        HikariConfig config = new HikariConfig();
+        try {
+            config.setJdbcUrl(env.getProperty("spring.datasource.url", "jdbc:postgresql://localhost:5434/prueba"));
+            config.setPassword(env.getProperty("spring.datasource.password", "cloe_123"));
+            config.setUsername(env.getProperty("spring.datasource.username", "postgres"));
+
+            int maxPool = env.getProperty("spring.datasource.hikari.maximum-pool-size", Integer.class, 50);
+            int minIdle = env.getProperty("spring.datasource.hikari.minimum-idle", Integer.class, 10);
+            long connTimeout = env.getProperty("spring.datasource.hikari.connection-timeout", Long.class, 20000L);
+            long maxLifetime = env.getProperty("spring.datasource.hikari.max-lifetime", Long.class, 600000L);
+            long idleTimeout = env.getProperty("spring.datasource.hikari.idle-timeout", Long.class, 300000L);
+
+            config.setMaximumPoolSize(maxPool);
+            config.setMinimumIdle(minIdle);
+            config.setConnectionTimeout(connTimeout);
+            config.setMaxLifetime(maxLifetime);
+            config.setIdleTimeout(idleTimeout);
             config.setValidationTimeout(5000);
-            config.setMinimumIdle(2);
             config.setConnectionTestQuery("SELECT 1");
             config.setPoolName("sfDatasource");
 
-        }catch (Exception e){
-            log.error("Ha ocurrido un error en la conexcion a base de datos, a causa de:",e);
+        } catch (Exception e) {
+            log.error("Ha ocurrido un error en la conexion a base de datos, a causa de:", e);
             return null;
         }
         return new HikariDataSource(config);
