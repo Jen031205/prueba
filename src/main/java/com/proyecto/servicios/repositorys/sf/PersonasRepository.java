@@ -10,5 +10,6 @@ import java.util.Optional;
 public interface PersonasRepository  extends JpaRepository<Personas, Integer> {
 
 
+    Optional<Personas> findFirstByNombre(String nombre);
     Optional<Personas> findByNombre(String nombre);
 }

@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class PuntoRedTokenProvider {
 
+    private static final int DEFAULT_ID_DISTRIBUIDOR = 83;
+    private static final String DEFAULT_CODIGO_DISPOSITIVO = "GPS83-TPV-17";
+    private static final String DEFAULT_PASSWORD = "12345678";
+
     private final PuntoRedProperties properties;
 
     @Autowired(required = false)
@@ -23,7 +27,9 @@ public class PuntoRedTokenProvider {
     @Value("${gestopago.auth.password:12345678}")
     private String password;
 
-    private volatile String token;
+
+    
+    private volatile String token; 
 
     public PuntoRedTokenProvider(PuntoRedProperties properties) {
         this.properties = properties;
@@ -38,8 +44,10 @@ public class PuntoRedTokenProvider {
             if (gestoPagoAuthClient == null) {
                 throw new IllegalStateException("No se pudo crear el cliente de autenticacion de GestoPago");
             }
-            GestoPagoAuthResponse response = gestoPagoAuthClient.authenticate(
-                    idDistribuidor, codigoDispositivo, password);
+                GestoPagoAuthResponse response = gestoPagoAuthClient.authenticate(
+                    idDistribuidor != null ? idDistribuidor : DEFAULT_ID_DISTRIBUIDOR,
+                    valueOrDefault(codigoDispositivo, DEFAULT_CODIGO_DISPOSITIVO),
+                    valueOrDefault(password, DEFAULT_PASSWORD));
             if (response == null || response.getToken() == null || response.getToken().isBlank()) {
                 throw new IllegalStateException("GestoPago no devolvio un token valido");
             }
@@ -47,5 +55,9 @@ public class PuntoRedTokenProvider {
         }
 
         return "Bearer " + token;
+    }
+
+    private String valueOrDefault(String value, String defaultValue) {
+        return value == null || value.isBlank() ? defaultValue : value;
     }
 }
