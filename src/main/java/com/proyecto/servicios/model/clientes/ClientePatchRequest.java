@@ -20,6 +20,16 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 public class ClientePatchRequest {
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.proyecto.servicios.config.StrictStringDeserializer.class)
+    private String curp;
+
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.proyecto.servicios.config.StrictStringDeserializer.class)
+    private String rfc;
+
+    @com.fasterxml.jackson.annotation.JsonAlias("cuenta")
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.proyecto.servicios.config.StrictStringDeserializer.class)
+    private String numeroCuenta;
+
     @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
     @Pattern(regexp = "^$|^[\\p{L}]+(?: [\\p{L}]+)*$", message = "En campo de texto solo debe de ingresar texto y no caracteres especiales para nombre")
     @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.proyecto.servicios.config.StrictStringDeserializer.class)

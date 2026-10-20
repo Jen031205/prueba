@@ -8,6 +8,9 @@ import com.proyecto.servicios.service.clientes.ClienteNoEncontradoException;
 import com.proyecto.servicios.service.clientes.ClienteYaRegistradoException;
 import com.proyecto.servicios.service.clientes.CuentaNoEncontradaException;
 import com.proyecto.servicios.service.clientes.ErrorValidacionException;
+import com.proyecto.servicios.service.usuarios.UsuarioCorreoDuplicadoException;
+import com.proyecto.servicios.service.usuarios.UsuarioInvalidoException;
+import com.proyecto.servicios.service.usuarios.UsuarioNoEncontradoException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,7 +29,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestControllerAdvice(basePackages = "com.proyecto.servicios.controller")
+@RestControllerAdvice(basePackages = {
+        "com.proyecto.servicios.controller.clientes",
+        "com.proyecto.servicios.controller.usuarios",
+        "com.proyecto.servicios.controller.auth"
+})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class ClienteExceptionHandler {
 
@@ -50,14 +57,24 @@ public class ClienteExceptionHandler {
         return respuesta(HttpStatus.CONFLICT, exception.getMessage(), null);
     }
 
+    @ExceptionHandler(UsuarioCorreoDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>> usuarioCorreoDuplicado(UsuarioCorreoDuplicadoException exception) {
+        return respuesta(HttpStatus.CONFLICT, exception.getMessage(), exception.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> integridad(DataIntegrityViolationException exception) {
         return respuesta(HttpStatus.CONFLICT, "Los datos infringen una restricción de unicidad o integridad referencial", null);
     }
 
-    @ExceptionHandler({ClienteNoEncontradoException.class, CuentaNoEncontradaException.class, BiometriaNoEncontradaException.class})
+    @ExceptionHandler({ClienteNoEncontradoException.class, CuentaNoEncontradaException.class, BiometriaNoEncontradaException.class, UsuarioNoEncontradoException.class})
     public ResponseEntity<Map<String, Object>> noEncontrado(RuntimeException exception) {
         return respuesta(HttpStatus.NOT_FOUND, exception.getMessage(), null);
+    }
+
+    @ExceptionHandler(UsuarioInvalidoException.class)
+    public ResponseEntity<Map<String, Object>> usuarioInvalido(UsuarioInvalidoException exception) {
+        return respuesta(HttpStatus.BAD_REQUEST, exception.getMessage(), exception.getMessage());
     }
 
     @ExceptionHandler(ErrorValidacionException.class)

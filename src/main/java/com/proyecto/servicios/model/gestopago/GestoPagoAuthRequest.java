@@ -2,13 +2,11 @@ package com.proyecto.servicios.model.gestopago;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
+@Setter
 public class GestoPagoAuthRequest {
 
     // Identificador del distribuidor para la autenticacion.
@@ -22,4 +20,37 @@ public class GestoPagoAuthRequest {
     // Password del acceso al servicio externo.
     @NotBlank(message = "password es obligatorio")
     private String password;
+
+    public GestoPagoAuthRequest() {
+    }
+
+    public GestoPagoAuthRequest(Integer idDistribuidor, String codigoDispositivo, String password) {
+        this.idDistribuidor = idDistribuidor;
+        this.codigoDispositivo = codigoDispositivo;
+        this.password = password;
+    }
+
+    public Integer getIdDistribuidor() {
+        return idDistribuidor;
+    }
+
+    public void setIdDistribuidor(Integer idDistribuidor) {
+        this.idDistribuidor = idDistribuidor;
+    }
+
+    public String getCodigoDispositivo() {
+        return codigoDispositivo;
+    }
+
+    public void setCodigoDispositivo(String codigoDispositivo) {
+        this.codigoDispositivo = codigoDispositivo;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
 }

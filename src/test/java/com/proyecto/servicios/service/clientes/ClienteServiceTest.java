@@ -4,6 +4,8 @@ import com.proyecto.servicios.entity.sf.clientes.Cliente;
 import com.proyecto.servicios.entity.sf.clientes.Cuenta;
 import com.proyecto.servicios.entity.sf.clientes.Domicilio;
 import com.proyecto.servicios.model.clientes.ClienteActualizacionRequest;
+import com.proyecto.servicios.model.clientes.ClienteBusquedaRequest;
+import com.proyecto.servicios.model.clientes.ClienteConsultaRequest;
 import com.proyecto.servicios.model.clientes.ClientePatchRequest;
 import com.proyecto.servicios.model.clientes.ClienteRequest;
 import com.proyecto.servicios.model.clientes.ClienteResponse;
@@ -287,5 +289,138 @@ class ClienteServiceTest {
         assertEquals("Original", cliente.getNombre());
         assertEquals("5599887766", cliente.getTelefonoMovil());
         assertEquals("Gerente", cliente.getOcupacion());
+    }
+
+    @Test
+    void consultarRetornaClientePorCurp() {
+        Cliente cliente = new Cliente();
+        cliente.setCurp("GALA900101MDFRNN09");
+        cliente.setNombre("Ana");
+
+        when(clienteRepository.findByCurp("GALA900101MDFRNN09")).thenReturn(Optional.of(cliente));
+
+        ClienteConsultaRequest req = new ClienteConsultaRequest();
+        req.setCurp("GALA900101MDFRNN09");
+
+        ClienteResponse resp = clienteService.consultar(req);
+        assertNotNull(resp);
+        assertEquals("Ana", resp.getNombre());
+    }
+
+    @Test
+    void consultarRetornaClientePorRfc() {
+        Cliente cliente = new Cliente();
+        cliente.setRfc("GALA900101ABC");
+        cliente.setNombre("Ana");
+
+        when(clienteRepository.findByRfc("GALA900101ABC")).thenReturn(Optional.of(cliente));
+
+        ClienteConsultaRequest req = new ClienteConsultaRequest();
+        req.setRfc("GALA900101ABC");
+
+        ClienteResponse resp = clienteService.consultar(req);
+        assertNotNull(resp);
+        assertEquals("Ana", resp.getNombre());
+    }
+
+    @Test
+    void consultarRetornaClientePorCorreo() {
+        Cliente cliente = new Cliente();
+        cliente.setCorreoElectronico("ana@example.com");
+        cliente.setNombre("Ana");
+
+        when(clienteRepository.findByCorreoElectronicoIgnoreCase("ana@example.com")).thenReturn(Optional.of(cliente));
+
+        ClienteConsultaRequest req = new ClienteConsultaRequest();
+        req.setCorreoElectronico("ana@example.com");
+
+        ClienteResponse resp = clienteService.consultar(req);
+        assertNotNull(resp);
+        assertEquals("Ana", resp.getNombre());
+    }
+
+    @Test
+    void consultarLanzaErrorValidacionSiNoEnviaCriterio() {
+        ClienteConsultaRequest req = new ClienteConsultaRequest();
+        assertThrows(ErrorValidacionException.class, () -> clienteService.consultar(req));
+    }
+
+    @Test
+    void buscarConFiltrosRetornaLista() {
+        Cliente cliente = new Cliente();
+        cliente.setNombre("Ana");
+
+        when(clienteRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
+                .thenReturn(List.of(cliente));
+
+        ClienteBusquedaRequest req = new ClienteBusquedaRequest();
+        req.setNombre("Ana");
+
+        List<ClienteResponse> resp = clienteService.buscar(req);
+        assertEquals(1, resp.size());
+        assertEquals("Ana", resp.get(0).getNombre());
+    }
+
+    @Test
+    void actualizarSinIdPorCurpModificaDatos() {
+        Cliente cliente = new Cliente();
+        cliente.setId(1L);
+        cliente.setCurp("GALA900101MDFRNN09");
+        cliente.setCorreoElectronico("antiguo@example.com");
+        cliente.setDomicilio(new Domicilio());
+
+        when(clienteRepository.findByCurp("GALA900101MDFRNN09")).thenReturn(Optional.of(cliente));
+        when(clienteRepository.findByCorreoElectronicoIgnoreCase("nuevo@example.com")).thenReturn(Optional.empty());
+        when(clienteRepository.saveAndFlush(any(Cliente.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ClienteActualizacionRequest actualizacion = new ClienteActualizacionRequest();
+        actualizacion.setCurp("GALA900101MDFRNN09");
+        actualizacion.setNombre("Ana Modificada");
+        actualizacion.setApellidoPaterno("Lopez");
+        actualizacion.setApellidoMaterno("Garcia");
+        actualizacion.setFechaNacimiento(LocalDate.of(1990, 1, 1));
+        actualizacion.setSexo("Masculino");
+        actualizacion.setNacionalidad("Mexicana");
+        actualizacion.setEstadoCivil("Soltero");
+        actualizacion.setCorreoElectronico("nuevo@example.com");
+        actualizacion.setTelefonoMovil("5512345678");
+        actualizacion.setOcupacion("Analista");
+        actualizacion.setEmpresa("Empresa SA");
+        actualizacion.setIngresoMensual(new BigDecimal("32000.00"));
+
+        DomicilioRequest dom = new DomicilioRequest();
+        dom.setCalle("Reforma");
+        dom.setNumeroExterior("10");
+        dom.setColonia("Centro");
+        dom.setMunicipio("Cuauhtemoc");
+        dom.setEstado("CDMX");
+        dom.setCodigoPostal("06000");
+        dom.setPais("Mexico");
+        actualizacion.setDomicilio(dom);
+
+        ClienteResponse resp = clienteService.actualizar(actualizacion);
+        assertNotNull(resp);
+        assertEquals("Ana Modificada", resp.getNombre());
+        assertEquals("nuevo@example.com", resp.getCorreoElectronico());
+    }
+
+    @Test
+    void patchSinIdPorCurpActualizaCampos() {
+        Cliente cliente = new Cliente();
+        cliente.setId(1L);
+        cliente.setCurp("GALA900101MDFRNN09");
+        cliente.setNombre("Original");
+        cliente.setTelefonoMovil("5511223344");
+
+        when(clienteRepository.findByCurp("GALA900101MDFRNN09")).thenReturn(Optional.of(cliente));
+        when(clienteRepository.saveAndFlush(any(Cliente.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ClientePatchRequest patchRequest = new ClientePatchRequest();
+        patchRequest.setCurp("GALA900101MDFRNN09");
+        patchRequest.setTelefonoMovil("5599887766");
+
+        ClienteResponse resp = clienteService.patch(patchRequest);
+        assertNotNull(resp);
+        assertEquals("5599887766", resp.getTelefonoMovil());
     }
 }

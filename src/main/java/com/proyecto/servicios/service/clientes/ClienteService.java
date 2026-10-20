@@ -4,6 +4,8 @@ import com.proyecto.servicios.entity.sf.clientes.Cliente;
 import com.proyecto.servicios.entity.sf.clientes.Cuenta;
 import com.proyecto.servicios.entity.sf.clientes.Domicilio;
 import com.proyecto.servicios.model.clientes.ClienteActualizacionRequest;
+import com.proyecto.servicios.model.clientes.ClienteBusquedaRequest;
+import com.proyecto.servicios.model.clientes.ClienteConsultaRequest;
 import com.proyecto.servicios.model.clientes.ClienteDatosRequest;
 import com.proyecto.servicios.model.clientes.ClientePatchRequest;
 import com.proyecto.servicios.model.clientes.ClienteRequest;
@@ -12,6 +14,7 @@ import com.proyecto.servicios.model.clientes.CuentaResponse;
 import com.proyecto.servicios.model.clientes.SaldoResponse;
 import com.proyecto.servicios.repositorys.sf.clientes.ClienteRepository;
 import com.proyecto.servicios.repositorys.sf.clientes.CuentaRepository;
+import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -144,14 +147,54 @@ public class ClienteService {
         return toResponse(cuenta.getCliente());
     }
 
+    @Transactional(readOnly = true)
+    public ClienteResponse consultar(ClienteConsultaRequest request) {
+        if (request == null) {
+            throw new ErrorValidacionException("Debe proporcionar al menos un criterio de consulta: curp, rfc, correoElectronico o numeroCuenta");
+        }
+        if (request.getCurp() != null && !request.getCurp().isBlank()) {
+            return buscarPorCurp(request.getCurp());
+        }
+        if (request.getRfc() != null && !request.getRfc().isBlank()) {
+            return buscarPorRfc(request.getRfc());
+        }
+        if (request.getNumeroCuenta() != null && !request.getNumeroCuenta().isBlank()) {
+            return buscarPorCuenta(request.getNumeroCuenta());
+        }
+        if (request.getCorreoElectronico() != null && !request.getCorreoElectronico().isBlank()) {
+            return buscarPorCorreo(request.getCorreoElectronico());
+        }
+        throw new ErrorValidacionException("Debe proporcionar al menos un criterio de consulta: curp, rfc, correoElectronico o numeroCuenta");
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClienteResponse> buscar(ClienteBusquedaRequest request) {
+        if (request == null) {
+            return listar();
+        }
+        Specification<Cliente> spec = ClienteSpecification.conFiltros(request);
+        return clienteRepository.findAll(spec).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public ClienteResponse actualizar(ClienteActualizacionRequest request) {
+        Cliente cliente = resolverCliente(request.getCurp(), request.getRfc(), request.getNumeroCuenta(), request.getCorreoElectronico());
+        return actualizarClienteExistente(cliente, request);
+    }
+
     @Transactional
     public ClienteResponse actualizar(Long id, ClienteActualizacionRequest request) {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ClienteNoEncontradoException("id " + id));
+        return actualizarClienteExistente(cliente, request);
+    }
 
+    private ClienteResponse actualizarClienteExistente(Cliente cliente, ClienteActualizacionRequest request) {
         String correo = request.getCorreoElectronico().trim().toLowerCase(Locale.ROOT);
         clienteRepository.findByCorreoElectronicoIgnoreCase(correo).ifPresent(otro -> {
-            if (!otro.getId().equals(id)) {
+            if (!otro.getId().equals(cliente.getId())) {
                 throw new CorreoDuplicadoException(correo);
             }
         });
@@ -170,10 +213,40 @@ public class ClienteService {
     }
 
     @Transactional
+    public ClienteResponse patch(ClientePatchRequest request) {
+        Cliente cliente = resolverCliente(request.getCurp(), request.getRfc(), request.getNumeroCuenta(), request.getCorreoElectronico());
+        return aplicarPatchCliente(cliente, request);
+    }
+
+    @Transactional
     public ClienteResponse patch(Long id, ClientePatchRequest request) {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ClienteNoEncontradoException("id " + id));
+        return aplicarPatchCliente(cliente, request);
+    }
 
+    private Cliente resolverCliente(String curp, String rfc, String numeroCuenta, String correo) {
+        if (curp != null && !curp.isBlank()) {
+            return clienteRepository.findByCurp(curp.trim().toUpperCase(Locale.ROOT))
+                    .orElseThrow(() -> new ClienteNoEncontradoException("CURP " + curp));
+        }
+        if (rfc != null && !rfc.isBlank()) {
+            return clienteRepository.findByRfc(rfc.trim().toUpperCase(Locale.ROOT))
+                    .orElseThrow(() -> new ClienteNoEncontradoException("RFC " + rfc));
+        }
+        if (numeroCuenta != null && !numeroCuenta.isBlank()) {
+            Cuenta cuenta = cuentaRepository.findByNumeroCuenta(numeroCuenta.trim())
+                    .orElseThrow(() -> new CuentaNoEncontradaException(numeroCuenta));
+            return cuenta.getCliente();
+        }
+        if (correo != null && !correo.isBlank()) {
+            return clienteRepository.findByCorreoElectronicoIgnoreCase(correo.trim())
+                    .orElseThrow(() -> new ClienteNoEncontradoException("correo " + correo));
+        }
+        throw new ErrorValidacionException("Debe proporcionar al menos un identificador (curp, rfc, numeroCuenta o correoElectronico) para localizar al cliente");
+    }
+
+    private ClienteResponse aplicarPatchCliente(Cliente cliente, ClientePatchRequest request) {
         if (request.getNombre() != null && !request.getNombre().isBlank()) {
             cliente.setNombre(request.getNombre().trim());
         }
@@ -204,7 +277,7 @@ public class ClienteService {
         if (request.getCorreoElectronico() != null && !request.getCorreoElectronico().isBlank()) {
             String correo = request.getCorreoElectronico().trim().toLowerCase(Locale.ROOT);
             clienteRepository.findByCorreoElectronicoIgnoreCase(correo).ifPresent(otro -> {
-                if (!otro.getId().equals(id)) {
+                if (!otro.getId().equals(cliente.getId())) {
                     throw new CorreoDuplicadoException(correo);
                 }
             });
@@ -228,7 +301,7 @@ public class ClienteService {
         if (request.getActivo() != null) {
             cliente.setActivo(request.getActivo());
             if (!request.getActivo()) {
-                cuentaRepository.findByClienteId(id).stream()
+                cuentaRepository.findByClienteId(cliente.getId()).stream()
                         .filter(cuenta -> CUENTA_ACTIVA.equals(cuenta.getEstatus()))
                         .forEach(cuenta -> cuenta.setEstatus(CUENTA_INACTIVA));
             }

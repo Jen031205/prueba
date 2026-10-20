@@ -184,74 +184,44 @@ class ClienteControllerTest {
     }
 
     @Test
-    void getClientePorIdRetorna200CuandoExiste() throws Exception {
+    void putClienteRetorna200Ok() throws Exception {
         ClienteResponse r = new ClienteResponse();
         r.setId(1L);
-        r.setNombre("Ana");
-
-        when(clienteService.buscarPorId(1L)).thenReturn(r);
-
-        mockMvc.perform(get("/clientes/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L));
-    }
-
-    @Test
-    void getClientePorIdRetorna404CuandoNoExiste() throws Exception {
-        when(clienteService.buscarPorId(99L))
-                .thenThrow(new ClienteNoEncontradoException("id 99"));
-
-        mockMvc.perform(get("/clientes/99"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
-    }
-
-    @Test
-    void getClientePorCurpRetornaCliente() throws Exception {
-        ClienteResponse r = new ClienteResponse();
+        r.setNombre("Ana Actualizada");
         r.setCurp("GALA900101MDFRNN09");
 
-        when(clienteService.buscarPorCurp("GALA900101MDFRNN09")).thenReturn(r);
+        ClienteActualizacionRequest actualizacion = new ClienteActualizacionRequest();
+        actualizacion.setCurp("GALA900101MDFRNN09");
+        actualizacion.setNombre("Ana Actualizada");
+        actualizacion.setApellidoPaterno("Lopez");
+        actualizacion.setApellidoMaterno("Garcia");
+        actualizacion.setFechaNacimiento(LocalDate.of(1990, 1, 1));
+        actualizacion.setSexo("Masculino");
+        actualizacion.setNacionalidad("Mexicana");
+        actualizacion.setEstadoCivil("Soltero");
+        actualizacion.setCorreoElectronico("ana@example.com");
+        actualizacion.setTelefonoMovil("5512345678");
+        actualizacion.setOcupacion("Analista");
+        actualizacion.setEmpresa("Empresa SA");
+        actualizacion.setIngresoMensual(new BigDecimal("30000.00"));
 
-        mockMvc.perform(get("/clientes/curp/GALA900101MDFRNN09"))
+        DomicilioRequest domicilio = new DomicilioRequest();
+        domicilio.setCalle("Reforma");
+        domicilio.setNumeroExterior("10");
+        domicilio.setColonia("Centro");
+        domicilio.setMunicipio("Cuauhtemoc");
+        domicilio.setEstado("CDMX");
+        domicilio.setCodigoPostal("06000");
+        domicilio.setPais("Mexico");
+        actualizacion.setDomicilio(domicilio);
+
+        when(clienteService.actualizar(any(ClienteActualizacionRequest.class))).thenReturn(r);
+
+        mockMvc.perform(put("/clientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(actualizacion)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.curp").value("GALA900101MDFRNN09"));
-    }
-
-    @Test
-    void getClientePorRfcRetornaCliente() throws Exception {
-        ClienteResponse r = new ClienteResponse();
-        r.setRfc("GALA900101ABC");
-
-        when(clienteService.buscarPorRfc("GALA900101ABC")).thenReturn(r);
-
-        mockMvc.perform(get("/clientes/rfc/GALA900101ABC"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rfc").value("GALA900101ABC"));
-    }
-
-    @Test
-    void getClientePorCorreoRetornaCliente() throws Exception {
-        ClienteResponse r = new ClienteResponse();
-        r.setCorreoElectronico("ana@example.com");
-
-        when(clienteService.buscarPorCorreo("ana@example.com")).thenReturn(r);
-
-        mockMvc.perform(get("/clientes/correo/ana@example.com"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.correoElectronico").value("ana@example.com"));
-    }
-
-    @Test
-    void getClientePorCuentaRetornaTitular() throws Exception {
-        ClienteResponse r = new ClienteResponse();
-        r.setNombre("Ana");
-
-        when(clienteService.buscarPorCuenta("4100000000000001")).thenReturn(r);
-
-        mockMvc.perform(get("/clientes/cuenta/4100000000000001"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Ana"));
+                .andExpect(jsonPath("$.nombre").value("Ana Actualizada"));
     }
 
     @Test
@@ -262,11 +232,12 @@ class ClienteControllerTest {
         r.setTelefonoMovil("5599887766");
 
         ClientePatchRequest patchRequest = new ClientePatchRequest();
+        patchRequest.setCurp("GALA900101MDFRNN09");
         patchRequest.setTelefonoMovil("5599887766");
 
-        when(clienteService.patch(eq(1L), any(ClientePatchRequest.class))).thenReturn(r);
+        when(clienteService.patch(any(ClientePatchRequest.class))).thenReturn(r);
 
-        mockMvc.perform(patch("/clientes/1")
+        mockMvc.perform(patch("/clientes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(patchRequest)))
                 .andExpect(status().isOk())
@@ -275,14 +246,136 @@ class ClienteControllerTest {
     }
 
     @Test
-    void deleteClienteRetorna200OkYDesactiva() throws Exception {
-        doNothing().when(clienteService).desactivar(1L);
+    void postConsultaPorCurpRetornaCliente() throws Exception {
+        ClienteResponse r = new ClienteResponse();
+        r.setCurp("GALA900101MDFRNN09");
 
-        mockMvc.perform(delete("/clientes/1"))
+        when(clienteService.consultar(any(com.proyecto.servicios.model.clientes.ClienteConsultaRequest.class))).thenReturn(r);
+
+        String jsonConsulta = """
+            {
+              "curp": "GALA900101MDFRNN09"
+            }
+            """;
+
+        mockMvc.perform(post("/clientes/consulta")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConsulta))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.activo").value(false))
-                .andExpect(jsonPath("$.mensaje").value(org.hamcrest.Matchers.containsString("desactivado correctamente")));
+                .andExpect(jsonPath("$.curp").value("GALA900101MDFRNN09"));
+    }
+
+    @Test
+    void postConsultaPorRfcRetornaCliente() throws Exception {
+        ClienteResponse r = new ClienteResponse();
+        r.setRfc("GALA900101ABC");
+
+        when(clienteService.consultar(any(com.proyecto.servicios.model.clientes.ClienteConsultaRequest.class))).thenReturn(r);
+
+        String jsonConsulta = """
+            {
+              "rfc": "GALA900101ABC"
+            }
+            """;
+
+        mockMvc.perform(post("/clientes/consulta")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConsulta))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rfc").value("GALA900101ABC"));
+    }
+
+    @Test
+    void postConsultaPorCorreoRetornaCliente() throws Exception {
+        ClienteResponse r = new ClienteResponse();
+        r.setCorreoElectronico("ana@example.com");
+
+        when(clienteService.consultar(any(com.proyecto.servicios.model.clientes.ClienteConsultaRequest.class))).thenReturn(r);
+
+        String jsonConsulta = """
+            {
+              "correoElectronico": "ana@example.com"
+            }
+            """;
+
+        mockMvc.perform(post("/clientes/consulta")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConsulta))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.correoElectronico").value("ana@example.com"));
+    }
+
+    @Test
+    void postConsultaPorCuentaRetornaTitular() throws Exception {
+        ClienteResponse r = new ClienteResponse();
+        r.setNombre("Ana");
+
+        when(clienteService.consultar(any(com.proyecto.servicios.model.clientes.ClienteConsultaRequest.class))).thenReturn(r);
+
+        String jsonConsulta = """
+            {
+              "numeroCuenta": "4100000000000001"
+            }
+            """;
+
+        mockMvc.perform(post("/clientes/consulta")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConsulta))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Ana"));
+    }
+
+    @Test
+    void postConsultaRetorna404CuandoNoExiste() throws Exception {
+        when(clienteService.consultar(any(com.proyecto.servicios.model.clientes.ClienteConsultaRequest.class)))
+                .thenThrow(new ClienteNoEncontradoException("CURP INEXISTENTE"));
+
+        String jsonConsulta = """
+            {
+              "curp": "INEXISTENTE99999999"
+            }
+            """;
+
+        mockMvc.perform(post("/clientes/consulta")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConsulta))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void postBuscarConFiltrosRetornaLista() throws Exception {
+        ClienteResponse r = new ClienteResponse();
+        r.setNombre("Ana");
+
+        when(clienteService.buscar(any())).thenReturn(List.of(r));
+
+        String jsonBusqueda = """
+            {
+              "nombre": "Ana",
+              "activo": true
+            }
+            """;
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBusqueda))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nombre").value("Ana"));
+    }
+
+    @Test
+    void postBuscarSinFiltrosRetornaTodos() throws Exception {
+        ClienteResponse r = new ClienteResponse();
+        r.setNombre("Ana");
+
+        when(clienteService.buscar(any())).thenReturn(List.of(r));
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nombre").value("Ana"));
     }
 
     private static ClienteRequest solicitudValida() {

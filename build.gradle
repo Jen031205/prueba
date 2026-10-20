@@ -8,12 +8,12 @@ plugins {
     id 'java'
 }
 
-group 'com.proyecto.servicio.empresa'
-version '1.0'
+group = 'com.proyecto.servicio.empresa'
+version = '1.0'
 
-java{
-    sourceCompatibility=17
-    targetCompatibility=17
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 repositories {
@@ -108,9 +108,7 @@ sonarqube {
 }
 jacocoTestReport {
     reports {
-        reports {
-            xml.required=true
-        }
+        xml.required = true
     }
 }
 
@@ -119,16 +117,20 @@ jacocoTestReport {
 /**
  * Genera imagen
  */
-task dockerImage(type: Exec) {
-    println 'CrearImagen'
+tasks.register('dockerImage', Exec) {
+    doFirst {
+        println 'CrearImagen'
+    }
     commandLine "docker", "build", "-t", "proyecto-core:0.1", "$projectDir"
 }
 
 /**
  * Ejecuta imagen
  */
-task dockerUp(type: Exec) {
-    println "Arranca imagen"
+tasks.register('dockerUp', Exec) {
+    doFirst {
+        println "Arranca imagen"
+    }
     commandLine "docker-compose", "--compatibility", "up"
 }
 

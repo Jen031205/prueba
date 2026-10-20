@@ -89,22 +89,15 @@ erDiagram
 
 ## 4. Catálogo de Endpoints REST
 
-### Clientes (`ClienteController` - `/clientes`)
-| Método | Endpoint | Descripción |
-| :--- | :--- | :--- |
-| `POST` | `/clientes` | Registra cliente persona física, domicilio y crea cuenta automática |
-| `GET` | `/clientes` | Consulta todos los clientes registrados |
-| `GET` | `/clientes/activos` | Consulta clientes con estatus activo |
-| `GET` | `/clientes/{id}` | Consulta cliente por identificador ID |
-| `GET` | `/clientes/curp/{curp}` | Consulta cliente por CURP |
-| `GET` | `/clientes/rfc/{rfc}` | Consulta cliente por RFC |
-| `GET` | `/clientes/correo/{correo}` | Consulta cliente por correo electrónico (path variable o query param) |
-| `GET` | `/clientes/cuenta/{numeroCuenta}` | Consulta cliente titular por número de cuenta |
-| `GET` | `/clientes/registrados?desde=YYYY-MM-DD&hasta=YYYY-MM-DD` | Consulta clientes registrados en un rango de fechas |
-| `PUT` | `/clientes/{id}` | Actualiza completamente datos personales, contacto, laborales y domicilio (protege CURP, RFC y cuenta) |
-| `PATCH` | `/clientes/{id}` | Actualización parcial: modifica campos específicos (contacto, trabajo, domicilio o estatus activo) |
-| `DELETE` | `/clientes/{id}` | Desactiva lógicamente al cliente (activo = false) e inactiva sus cuentas, preservando su información en BD |
-| `POST` | `/clientes/{id}/desactivar` | Endpoint alternativo para baja lógica del cliente y sus cuentas |
+### Clientes (`ClienteController` - `cliente-controller` - `/clientes`)
+| Método | Endpoint | Request DTO | Descripción |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/clientes` | *Ninguno* | Consulta todos los clientes registrados sin parámetros ni IDs |
+| `PUT` | `/clientes` | `ClienteActualizacionRequest` | Modifica datos del cliente identificado por CURP, RFC, cuenta o correo (sin `id`) |
+| `POST` | `/clientes` | `ClienteRequest` | Registra cliente persona física, domicilio y asigna cuenta automática (sin `id`) |
+| `PATCH` | `/clientes` | `ClientePatchRequest` | Modificación parcial de cliente identificado por CURP, RFC, cuenta o correo (sin `id`) |
+| `POST` | `/clientes/consulta` | `ClienteConsultaRequest` | Consulta un único cliente por CURP, RFC, correo o número de cuenta (sin `id`) |
+| `POST` | `/clientes/buscar` | `ClienteBusquedaRequest` | Búsqueda dinámica con filtros combinables (sin `id`). Sin filtros retorna todos. |
 
 ### Cuentas (`CuentaController` - `/cuentas`)
 | Método | Endpoint | Descripción |
