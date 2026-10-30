@@ -8,6 +8,9 @@ import com.proyecto.servicios.service.clientes.ClienteNoEncontradoException;
 import com.proyecto.servicios.service.clientes.ClienteYaRegistradoException;
 import com.proyecto.servicios.service.clientes.CuentaNoEncontradaException;
 import com.proyecto.servicios.service.clientes.ErrorValidacionException;
+import com.proyecto.servicios.service.pagos.GestoPagoRechazoException;
+import com.proyecto.servicios.service.pagos.OperacionDuplicadaException;
+import com.proyecto.servicios.service.pagos.ProductoNoEncontradoException;
 import com.proyecto.servicios.service.usuarios.UsuarioCorreoDuplicadoException;
 import com.proyecto.servicios.service.usuarios.UsuarioInvalidoException;
 import com.proyecto.servicios.service.usuarios.UsuarioNoEncontradoException;
@@ -32,7 +35,8 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = {
         "com.proyecto.servicios.controller.clientes",
         "com.proyecto.servicios.controller.usuarios",
-        "com.proyecto.servicios.controller.auth"
+        "com.proyecto.servicios.controller.auth",
+        "com.proyecto.servicios.controller.pagos"
 })
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class ClienteExceptionHandler {
@@ -62,12 +66,22 @@ public class ClienteExceptionHandler {
         return respuesta(HttpStatus.CONFLICT, exception.getMessage(), exception.getMessage());
     }
 
+    @ExceptionHandler(OperacionDuplicadaException.class)
+    public ResponseEntity<Map<String, Object>> operacionDuplicada(OperacionDuplicadaException exception) {
+        return respuesta(HttpStatus.CONFLICT, exception.getMessage(), "Alerta: Transacción duplicada.");
+    }
+
+    @ExceptionHandler(GestoPagoRechazoException.class)
+    public ResponseEntity<Map<String, Object>> rechazoProveedor(GestoPagoRechazoException exception) {
+        return respuesta(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), "Alerta: El proveedor no pudo autorizar la transacción.");
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> integridad(DataIntegrityViolationException exception) {
         return respuesta(HttpStatus.CONFLICT, "Los datos infringen una restricción de unicidad o integridad referencial", null);
     }
 
-    @ExceptionHandler({ClienteNoEncontradoException.class, CuentaNoEncontradaException.class, BiometriaNoEncontradaException.class, UsuarioNoEncontradoException.class})
+    @ExceptionHandler({ClienteNoEncontradoException.class, CuentaNoEncontradaException.class, BiometriaNoEncontradaException.class, UsuarioNoEncontradoException.class, ProductoNoEncontradoException.class})
     public ResponseEntity<Map<String, Object>> noEncontrado(RuntimeException exception) {
         return respuesta(HttpStatus.NOT_FOUND, exception.getMessage(), null);
     }
