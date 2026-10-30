@@ -250,6 +250,16 @@ public class PagoServiceImpl implements PagoService {
         log.info("Pago confirmado exitosamente. Folio={}, Saldo anterior={}, Nuevo saldo={}",
                 folioTransaccion, saldoAnterior, nuevoSaldo);
 
+        // 15. Enviar correo de confirmación de pago exitoso al cliente
+        try {
+            if (dobleAutenticacionService != null) {
+                dobleAutenticacionService.enviarComprobantePago(cliente, folioTransaccion, request.getMonto(),
+                        request.getReferencia(), cuenta.getNumeroCuenta(), nuevoSaldo);
+            }
+        } catch (Exception ex) {
+            log.warn("No fue posible enviar el comprobante de pago por correo: {}", ex.getMessage());
+        }
+
         return PagoCompraResponse.builder()
                 .estado(true)
                 .codigo("00")

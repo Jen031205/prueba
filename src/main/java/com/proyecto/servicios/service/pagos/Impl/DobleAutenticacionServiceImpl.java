@@ -18,8 +18,11 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -101,6 +104,73 @@ public class DobleAutenticacionServiceImpl implements DobleAutenticacionService 
         return true;
     }
 
+    @Override
+    public void enviarComprobantePago(Cliente cliente, String folioTransaccion, BigDecimal monto,
+                                       String referencia, String numeroCuenta, BigDecimal nuevoSaldo) {
+        if (cliente == null || cliente.getCorreoElectronico() == null || cliente.getCorreoElectronico().isBlank()) {
+            log.warn("El cliente no tiene correo electrónico para enviar el comprobante de pago");
+            return;
+        }
+
+        String destinatario = cliente.getCorreoElectronico();
+        String nombre = cliente.getNombre();
+        String asunto = "¡Pago Exitoso! Comprobante de Transacción: " + folioTransaccion;
+
+        String fechaHora = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        String cuentaEnmascarada = numeroCuenta != null && numeroCuenta.length() >= 4
+                ? "**** **** **** " + numeroCuenta.substring(numeroCuenta.length() - 4)
+                : (numeroCuenta != null ? numeroCuenta : "N/A");
+
+        String htmlContent = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;'>"
+                + "<div style='text-align: center; margin-bottom: 24px;'>"
+                + "  <div style='background-color: #ecfdf5; color: #059669; font-size: 20px; font-weight: bold; padding: 14px 24px; border-radius: 8px; display: inline-block;'>"
+                + "    ✓ ¡Pago Realizado con Éxito!"
+                + "  </div>"
+                + "</div>"
+                + "<p style='font-size: 15px; color: #334155;'>Hola <strong>" + (nombre != null ? nombre : "Cliente") + "</strong>,</p>"
+                + "<p style='font-size: 15px; color: #334155;'>Te confirmamos que tu transacción financiera ha sido procesada y autorizada correctamente con los siguientes detalles:</p>"
+                + "<table style='width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; color: #334155;'>"
+                + "  <tr style='border-bottom: 1px solid #f1f5f9;'>"
+                + "    <td style='padding: 10px 0; color: #64748b;'>Folio de Transacción:</td>"
+                + "    <td style='padding: 10px 0; font-weight: bold; text-align: right;'>" + folioTransaccion + "</td>"
+                + "  </tr>"
+                + "  <tr style='border-bottom: 1px solid #f1f5f9;'>"
+                + "    <td style='padding: 10px 0; color: #64748b;'>Fecha y Hora:</td>"
+                + "    <td style='padding: 10px 0; font-weight: bold; text-align: right;'>" + fechaHora + "</td>"
+                + "  </tr>"
+                + "  <tr style='border-bottom: 1px solid #f1f5f9;'>"
+                + "    <td style='padding: 10px 0; color: #64748b;'>Concepto / Referencia:</td>"
+                + "    <td style='padding: 10px 0; font-weight: bold; text-align: right;'>" + (referencia != null ? referencia : "Pago de Servicio / Compra") + "</td>"
+                + "  </tr>"
+                + "  <tr style='border-bottom: 1px solid #f1f5f9;'>"
+                + "    <td style='padding: 10px 0; color: #64748b;'>Cuenta Débito:</td>"
+                + "    <td style='padding: 10px 0; font-weight: bold; text-align: right;'>" + cuentaEnmascarada + "</td>"
+                + "  </tr>"
+                + "  <tr style='border-bottom: 2px solid #059669;'>"
+                + "    <td style='padding: 12px 0; font-size: 16px; color: #0f172a;'>Monto Pagado:</td>"
+                + "    <td style='padding: 12px 0; font-size: 18px; font-weight: bold; color: #059669; text-align: right;'>$" + monto + " MXN</td>"
+                + "  </tr>"
+                + "  <tr>"
+                + "    <td style='padding: 10px 0; color: #64748b;'>Nuevo Saldo Disponible:</td>"
+                + "    <td style='padding: 10px 0; font-weight: bold; text-align: right;'>$" + nuevoSaldo + " MXN</td>"
+                + "  </tr>"
+                + "</table>"
+                + "<p style='font-size: 13px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-bottom: 0;'>Gracias por utilizar nuestra plataforma bancaria. Este comprobante es un acuse digital de tu operación.</p>"
+                + "</div>";
+
+        String textoPlano = "Hola " + (nombre != null ? nombre : "Cliente") + ",\n\n"
+                + "¡Tu pago ha sido procesado exitosamente!\n"
+                + "Folio: " + folioTransaccion + "\n"
+                + "Fecha: " + fechaHora + "\n"
+                + "Monto: $" + monto + " MXN\n"
+                + "Referencia: " + referencia + "\n"
+                + "Cuenta: " + cuentaEnmascarada + "\n"
+                + "Nuevo Saldo: $" + nuevoSaldo + " MXN\n\n"
+                + "Gracias por tu preferencia.\n";
+
+        despacharCorreo(destinatario, nombre, asunto, htmlContent, textoPlano);
+    }
+
     private void enviarCorreo(String destinatario, String nombre, String codigo) {
         if (destinatario == null || destinatario.isBlank()) {
             log.warn("El cliente no tiene un correo electrónico configurado para recibir 2FA");
@@ -125,6 +195,10 @@ public class DobleAutenticacionServiceImpl implements DobleAutenticacionService 
                 + "Este código es válido por " + EXPIRACION_MINUTOS + " minutos.\n"
                 + "Si no solicitaste este código, comunícate con atención al cliente.\n";
 
+        despacharCorreo(destinatario, nombre, asunto, htmlContent, textoPlano);
+    }
+
+    private void despacharCorreo(String destinatario, String nombre, String asunto, String htmlContent, String textoPlano) {
         // 1. Intentar envío vía Brevo REST API si la API Key está configurada
         if (brevoEmailClient != null && brevoApiKey != null && !brevoApiKey.isBlank()) {
             try {
@@ -143,7 +217,7 @@ public class DobleAutenticacionServiceImpl implements DobleAutenticacionService 
                         .build();
 
                 BrevoEmailResponse response = brevoEmailClient.sendEmail(brevoApiKey, brevoRequest);
-                log.info("Correo 2FA enviado exitosamente vía Brevo REST API a {}. MessageId: {}",
+                log.info("Correo enviado exitosamente vía Brevo REST API a {}. MessageId: {}",
                         destinatario, response != null ? response.getMessageId() : "OK");
                 return;
             } catch (Exception e) {
@@ -162,13 +236,12 @@ public class DobleAutenticacionServiceImpl implements DobleAutenticacionService 
                 helper.setSubject(asunto);
                 helper.setText(textoPlano, htmlContent);
                 mailSender.send(mimeMessage);
-                log.info("Correo 2FA enviado satisfactoriamente vía SMTP a {}", destinatario);
+                log.info("Correo enviado satisfactoriamente vía SMTP a {}", destinatario);
             } else {
-                log.info("Servidor de correo no configurado. Código 2FA generado para {}: {}", destinatario, codigo);
+                log.info("Servidor de correo no configurado para envío a {}: {}", destinatario, asunto);
             }
         } catch (Exception e) {
-            log.warn("Error al enviar correo SMTP a {}: {}. Código de respaldo: {}",
-                    destinatario, e.getMessage(), codigo);
+            log.warn("Error al enviar correo SMTP a {}: {}", destinatario, e.getMessage());
         }
     }
 
